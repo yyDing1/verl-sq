@@ -16,7 +16,7 @@ Preprocess the dataset to parquet format
 """
 
 import os
-from datasets import load_dataset, concatenate_datasets
+from datasets import Dataset, load_dataset, concatenate_datasets
 from functools import partial
 
 from verl.utils.hdfs_io import copy, makedirs
@@ -62,10 +62,10 @@ def build_aime2024_dataset():
 
 
 def build_gpqa_dimond_dataset():
+    import random
     GPQA_QUERY_TEMPLATE = "Answer the following multiple choice question. The last line of your response should be of the following format: 'Answer: $LETTER' (without quotes) where LETTER is one of ABCD. Think step by step before answering.\n\n{Question}\n\nA) {A}\nB) {B}\nC) {C}\nD) {D}"
 
     def process_gpqa_diamond(example):
-        import random
         choices = [example["Incorrect Answer 1"], example["Incorrect Answer 2"], example["Incorrect Answer 3"]]
         random.shuffle(choices)
         gold_index = random.randint(0, 3)
@@ -91,9 +91,89 @@ def build_gpqa_dimond_dataset():
     return dataset
 
 
+def build_cnmo2024_dataset():
+
+    def process_cnmo2024(example):
+        return example["question"], example["answer"]
+
+    data_source = 'opencompass/LiveMathBench'
+    print(f"Loading the {data_source} dataset from huggingface...", flush=True)
+    dataset = load_dataset(data_source, "v202412_AMC_en", split="test")
+    map_fn = partial(example_map_fn,
+                     process_fn=process_cnmo2024,
+                     data_source=data_source,
+                     ability="Math",
+                     split="test")
+    dataset = dataset.map(map_fn, with_indices=True, remove_columns=dataset.column_names)
+    return dataset
+
+
+def build_livecodebench_dataset():
+    import json, pickle, zlib, base64
+
+    def process_livecodebench(example):
+        # Construct Query Prompt
+        # From https://github.com/LiveCodeBench/LiveCodeBench/blob/998c52d394b836f15fff3b9a29866191108ff81b/lcb_runner/prompts/code_generation.py#L140
+        query_prompt = (
+            "You will be given a question (problem specification) and will generate a correct Python program that matches the specification and passes all tests.\n\n"
+            f"Question: {example['question_content']}\n\n"
+        )
+        if example["starter_code"]:
+            query_prompt += (
+                "You will use the following starter code to write the solution to the problem and enclose your code within delimiters.\n"
+                f"```python\n{example['starter_code']}\n```"
+            )            
+        else:
+            query_prompt += (
+                "Read the inputs from stdin solve the problem and write the answer to stdout (do not directly test on the sample inputs). Enclose your code within delimiters as follows. Ensure that when the python program runs, it reads the inputs, runs the algorithm and writes output to STDOUT."
+                f"```python\n# YOUR CODE HERE\n```"
+            )
+
+        # Construct test cases
+        public_test_cases = json.loads(example["public_test_cases"])
+        try:
+            private_test_cases = json.loads(example["private_test_cases"])
+        except:
+            private_test_cases = json.loads(
+                pickle.loads(
+                    zlib.decompress(
+                        base64.b64decode(example["private_test_cases"].encode("utf-8"))
+                    )
+                )
+            )
+        full_test_cases = public_test_cases + private_test_cases
+        metadata = json.loads(example["metadata"])
+        test_cases = {
+            "inputs": [t["input"] for t in full_test_cases],
+            "outputs": [t["output"] for t in full_test_cases],
+            "fn_name": metadata.get("func_name", None),
+        }
+        test_cases = json.dumps(test_cases)
+        return query_prompt, test_cases
+
+    data_source = 'livecodebench/code_generation_lite'
+    print(f"Loading the {data_source} dataset from huggingface...", flush=True)
+    dataset = load_dataset(data_source, split="test")
+    # R1 Evaluation use LiveCodeBench 24.08-25.01
+    dataset = dataset.filter(lambda line: "2024-08-00T00:00:00" <= line["contest_date"] < "2025-01-00T00:00:00")
+    map_fn = partial(example_map_fn,
+                     process_fn=process_livecodebench,
+                     data_source=data_source,
+                     ability="Code",
+                     split="test")
+
+    # dataset.map will cause errors here
+    # dataset = dataset.map(map_fn, with_indices=True, remove_columns=dataset.column_names)
+    processed_dataset = [map_fn(example, idx) for idx, example in enumerate(dataset)]
+    dataset = Dataset.from_list(processed_dataset)
+    return dataset
+
+
 TASK2DATA = {
     "aime2024": build_aime2024_dataset,
     "gpqa_diamond": build_gpqa_dimond_dataset,
+    "cnmo2024": build_cnmo2024_dataset,
+    "livecodebench": build_livecodebench_dataset,
 }
 SUPPORTED_TASKS = TASK2DATA.keys()
 
@@ -110,7 +190,7 @@ if __name__ == '__main__':
     else:
         args.tasks = [task.strip() for task in args.tasks.split(',') if task.strip()]
         for task in args.tasks:
-            if task not in SUPPORTED_TASKS.keys():
+            if task not in SUPPORTED_TASKS:
                 raise NotImplementedError(f"{task} has not been supported.")
 
     datasets = []

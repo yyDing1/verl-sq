@@ -27,7 +27,7 @@ import numpy as np
 def select_reward_fn(data_source):
     if data_source == 'lighteval/MATH':
         return math.compute_score
-    elif data_source == 'Maxwell-Jia/AIME_2024':
+    elif data_source in ['Maxwell-Jia/AIME_2024',"opencompass/LiveMathBench"]:
         return math_verify.compute_score
     elif data_source == 'Idavidrein/gpqa':
         return gpqa.compute_score
