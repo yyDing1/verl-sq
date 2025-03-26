@@ -151,11 +151,7 @@ def build_livecodebench_dataset():
                      ability="Code",
                      split="test")
 
-    # dataset.map will cause errors here
     dataset = dataset.map(map_fn, with_indices=True, remove_columns=dataset.column_names, num_proc=8)
-    # processed_dataset = [map_fn(example, idx) for idx, example in enumerate(dataset)]
-    # import pdb; pdb.set_trace()
-    # dataset = Dataset.from_list(processed_dataset)
     return dataset
 
 
