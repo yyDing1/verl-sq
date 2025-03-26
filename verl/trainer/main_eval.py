@@ -19,7 +19,7 @@ The input is a parquet file that contains N generated sequences and (optional) t
 
 import hydra
 from verl.utils.fs import copy_to_local
-from verl.utils.reward_score import math, gsm8k
+from verl.utils.reward_score import math, math_verify, gpqa
 import pandas as pd
 import numpy as np
 
@@ -27,6 +27,10 @@ import numpy as np
 def select_reward_fn(data_source):
     if data_source == 'lighteval/MATH':
         return math.compute_score
+    elif data_source == 'Maxwell-Jia/AIME_2024':
+        return math_verify.compute_score
+    elif data_source == 'Idavidrein/gpqa':
+        return gpqa.compute_score
     else:
         raise NotImplementedError
 
@@ -40,10 +44,10 @@ def main(config):
     data_sources = dataset[config.data.data_source_key]
     reward_model_data = dataset[config.data.reward_model_key]
 
-    passes = 0
-
     total = len(dataset)
 
+    # evaluate test_score based on data source
+    data_source_reward = {}
     for i in range(total):
         response_lst = responses[i]
         data_source = data_sources[i]
@@ -57,12 +61,17 @@ def main(config):
             score = reward_fn(r, ground_truth)
             score_lst.append(score)
 
-        max_score = np.max(score_lst)
+        max_score = np.mean(score_lst)
 
-        if max_score == 1:
-            passes += 1
+        if data_source not in data_source_reward:
+            data_source_reward[data_source] = []
+        data_source_reward[data_source].append(max_score)
 
-    print(f'pass@5: {passes / total}')
+    metric_dict = {}
+    for data_source, rewards in data_source_reward.items():
+        metric_dict[f'test_score/{data_source}'] = np.mean(rewards)
+
+    print(metric_dict)
 
 
 if __name__ == '__main__':
