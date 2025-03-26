@@ -1,7 +1,7 @@
 # Eval Data Process
-# python3 -m examples.data_preprocess.r1_bench \
-#     --local_dir /workspace/datasets/r1_bench \
-#     --tasks all
+python3 -m examples.data_preprocess.r1_bench \
+    --local_dir /workspace/datasets/r1_bench \
+    --tasks all
 
 # Generation
 python3 -m verl.trainer.main_generation \
@@ -21,7 +21,7 @@ python3 -m verl.trainer.main_generation \
     rollout.gpu_memory_utilization=0.9
 
 # Evaluation
-# python3 -m verl.trainer.main_eval \
-#     data.path=/workspace/datasets/r1_bench/test-output.parquet \
-#     data.prompt_key=prompt \
-#     data.response_key=responses \
+python3 -m verl.trainer.main_eval \
+    data.path=/workspace/datasets/r1_bench/test-output-8.parquet \
+    data.prompt_key=prompt \
+    data.response_key=responses \
