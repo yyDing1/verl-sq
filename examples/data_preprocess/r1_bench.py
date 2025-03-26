@@ -100,11 +100,19 @@ def build_cnmo2024_dataset():
     print(f"Loading the {data_source} dataset from huggingface...", flush=True)
 
     dataset_en = load_dataset(data_source, "v202412_CNMO_en", split="test")
-    map_fn_en = partial(example_map_fn, process_fn=process_cnmo2024, data_source='opencompass/cnmo2024_en', ability="Math", split="test")
+    map_fn_en = partial(example_map_fn,
+                        process_fn=process_cnmo2024,
+                        data_source='opencompass/cnmo2024_en',
+                        ability="Math",
+                        split="test")
     dataset_en = dataset_en.map(map_fn_en, with_indices=True, remove_columns=dataset_en.column_names)
 
     dataset_zh = load_dataset(data_source, "v202412_CNMO_cn", split="test")
-    map_fn_zh = partial(example_map_fn, process_fn=process_cnmo2024, data_source='opencompass/cnmo2024_zh', ability="Math", split="test")
+    map_fn_zh = partial(example_map_fn,
+                        process_fn=process_cnmo2024,
+                        data_source='opencompass/cnmo2024_zh',
+                        ability="Math",
+                        split="test")
     dataset_zh = dataset_zh.map(map_fn_zh, with_indices=True, remove_columns=dataset_zh.column_names)
 
     dataset = concatenate_datasets([dataset_en, dataset_zh])
