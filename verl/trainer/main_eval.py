@@ -30,7 +30,7 @@ from collections import defaultdict
 def select_reward_fn(data_source):
     if data_source == 'lighteval/MATH':
         return math.compute_score
-    elif data_source in ['Maxwell-Jia/AIME_2024', "opencompass/LiveMathBench"]:
+    elif data_source in ['Maxwell-Jia/AIME_2024', "opencompass/cnmo2024_en", "opencompass/cnmo2024_zh"]:
         return math_verify.compute_score
     elif data_source == 'Idavidrein/gpqa':
         return gpqa.compute_score

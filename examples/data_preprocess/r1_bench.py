@@ -16,7 +16,7 @@ Preprocess the dataset to parquet format
 """
 
 import os
-from datasets import Dataset, load_dataset, concatenate_datasets
+from datasets import load_dataset, concatenate_datasets
 from functools import partial
 
 from verl.utils.hdfs_io import copy, makedirs
@@ -98,9 +98,16 @@ def build_cnmo2024_dataset():
 
     data_source = 'opencompass/LiveMathBench'
     print(f"Loading the {data_source} dataset from huggingface...", flush=True)
-    dataset = load_dataset(data_source, "v202412_AMC_en", split="test")
-    map_fn = partial(example_map_fn, process_fn=process_cnmo2024, data_source=data_source, ability="Math", split="test")
-    dataset = dataset.map(map_fn, with_indices=True, remove_columns=dataset.column_names)
+
+    dataset_en = load_dataset(data_source, "v202412_CNMO_en", split="test")
+    map_fn_en = partial(example_map_fn, process_fn=process_cnmo2024, data_source='opencompass/cnmo2024_en', ability="Math", split="test")
+    dataset_en = dataset_en.map(map_fn_en, with_indices=True, remove_columns=dataset_en.column_names)
+
+    dataset_zh = load_dataset(data_source, "v202412_CNMO_cn", split="test")
+    map_fn_zh = partial(example_map_fn, process_fn=process_cnmo2024, data_source='opencompass/cnmo2024_zh', ability="Math", split="test")
+    dataset_zh = dataset_zh.map(map_fn_zh, with_indices=True, remove_columns=dataset_zh.column_names)
+
+    dataset = concatenate_datasets([dataset_en, dataset_zh])
     return dataset
 
 
