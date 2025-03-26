@@ -19,20 +19,32 @@ The input is a parquet file that contains N generated sequences and (optional) t
 
 import hydra
 from verl.utils.fs import copy_to_local
-from verl.utils.reward_score import math, math_verify, gpqa
+from verl.utils.reward_score import math, math_verify, gpqa, livecodebench
 import pandas as pd
 import numpy as np
+from tqdm import tqdm
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from collections import defaultdict
 
 
 def select_reward_fn(data_source):
     if data_source == 'lighteval/MATH':
         return math.compute_score
-    elif data_source in ['Maxwell-Jia/AIME_2024',"opencompass/LiveMathBench"]:
+    elif data_source in ['Maxwell-Jia/AIME_2024', "opencompass/LiveMathBench"]:
         return math_verify.compute_score
     elif data_source == 'Idavidrein/gpqa':
         return gpqa.compute_score
+    elif data_source in ['livecodebench/code_generation_lite', 'livecodebench/code_generation']:
+        return livecodebench.compute_score
     else:
         raise NotImplementedError
+
+
+def process_item(data_source, response_lst, reward_data):
+    reward_fn = select_reward_fn(data_source)
+    ground_truth = reward_data['ground_truth']
+    score_lst = [reward_fn(r, ground_truth) for r in response_lst]
+    return data_source, np.mean(score_lst)
 
 
 @hydra.main(config_path='config', config_name='evaluation', version_base=None)
@@ -43,29 +55,22 @@ def main(config):
     responses = dataset[config.data.response_key]
     data_sources = dataset[config.data.data_source_key]
     reward_model_data = dataset[config.data.reward_model_key]
+    num_process_evaluate = 16
 
     total = len(dataset)
 
     # evaluate test_score based on data source
-    data_source_reward = {}
-    for i in range(total):
-        response_lst = responses[i]
-        data_source = data_sources[i]
-        # select reward score based on data_source
-        prompt = prompts[i]
-        reward_data = reward_model_data[i]
-        reward_fn = select_reward_fn(data_source)
-        ground_truth = reward_data['ground_truth']
-        score_lst = []
-        for r in response_lst:
-            score = reward_fn(r, ground_truth)
-            score_lst.append(score)
+    data_source_reward = defaultdict(list)
+    args = [(data_sources[i], responses[i], reward_model_data[i]) for i in range(total)]
+    with tqdm(total=total) as pbar:
 
-        max_score = np.mean(score_lst)
+        with ProcessPoolExecutor(max_workers=num_process_evaluate) as executor:
+            futures = {executor.submit(process_item, *arg): i for i, arg in enumerate(args)}
 
-        if data_source not in data_source_reward:
-            data_source_reward[data_source] = []
-        data_source_reward[data_source].append(max_score)
+            for future in as_completed(futures):
+                data_source, score = future.result()
+                data_source_reward[data_source].append(score)
+                pbar.update(1)
 
     metric_dict = {}
     for data_source, rewards in data_source_reward.items():
