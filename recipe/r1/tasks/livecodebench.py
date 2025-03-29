@@ -18,7 +18,8 @@ import pickle
 import zlib
 import base64
 
-from .prime_code.testing_util import run_test
+# Reuse `run_test` for convenience
+from verl.utils.reward_score.prime_code.testing_util import run_test
 
 
 def _temp_run(in_outs, generation, debug, result, metadata_list, timeout):

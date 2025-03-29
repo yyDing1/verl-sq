@@ -1,11 +1,10 @@
-MODEL_PATH=deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
+MODEL_PATH=Qwen/DeepSeek-R1-Distill-Qwen-1.5B
 DATA_PATH=/workspace/datasets/r1_bench
 
 # Eval Data Process
-python3 -m examples.data_preprocess.r1_bench \
+python3 -m recipe.r1.data_process \
     --local_dir $DATA_PATH \
     --tasks all
-
 
 # Generation
 python3 -m verl.trainer.main_generation \
@@ -25,9 +24,10 @@ python3 -m verl.trainer.main_generation \
     rollout.gpu_memory_utilization=0.9 \
     rollout.max_num_batched_tokens=65536
 
-
 # Evaluation
-python3 -m verl.trainer.main_eval \
+python3 -m recipe.r1.main_eval \
     data.path=$DATA_PATH/test-output-8.parquet \
     data.prompt_key=prompt \
     data.response_key=responses \
+    custom_reward_function.path=recipe/r1/reward_score.py \
+    custom_reward_function.name=reward_func
