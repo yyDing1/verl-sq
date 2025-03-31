@@ -36,9 +36,9 @@ jobs:
     runs-on: self-hosted
     timeout-minutes: 40 # Increase this timeout value as needed
     env:
-      HTTP_PROXY: ${{ secrets.PROXY_HTTP }}
-      HTTPS_PROXY: ${{ secrets.PROXY_HTTPS }}
-      # NO_PROXY: "localhost,127.0.0.1"
+      HTTP_PROXY: http://host.docker.internal:5430
+      HTTPS_PROXY: http://host.docker.internal:5430
+      NO_PROXY: "localhost,127.0.0.1"
       HF_HUB_ENABLE_HF_TRANSFER: 1
     container:
       image: hiyouga/verl:ngc-th2.6.0-cu120-vllm0.8.2
