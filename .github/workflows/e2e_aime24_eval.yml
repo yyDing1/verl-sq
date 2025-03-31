@@ -7,6 +7,7 @@ on:
     branches:
       - main
       - v0.2.x
+      - verl-dev
     paths:
       - "**/*.py"
       - .github/workflows/e2e_aime24_eval.yml
