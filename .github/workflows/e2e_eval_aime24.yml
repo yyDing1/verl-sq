@@ -1,4 +1,4 @@
-name: e2e_aime24_eval
+name: e2e_eval_aime24
 
 on:
   # Trigger the workflow on push or pull request,
@@ -10,15 +10,16 @@ on:
       - verl-dev
     paths:
       - "**/*.py"
-      - .github/workflows/e2e_aime24_eval.yml
+      - .github/workflows/e2e_eval_aime24.yml
   pull_request:
     branches:
       - main
       - v0.2.x
+      - verl-dev
     paths:
       - "**/*.py"
       - "verl/trainer/config/*.yaml"
-      - .github/workflows/e2e_aime24_eval.yml
+      - .github/workflows/e2e_eval_aime24.yml
       - "tests/e2e/*.sh"
 
 # Declare permissions just read content.
