@@ -7,6 +7,7 @@ on:
     branches:
       - main
       - v0.2.x
+      - verl-dev-dev
     paths:
       - "**/*.py"
       - .github/workflows/e2e_gsm8k.yml
@@ -14,6 +15,7 @@ on:
     branches:
       - main
       - v0.2.x
+      - verl-dev-dev
     paths:
       - "**/*.py"
       - "verl/trainer/config/*.yaml"
